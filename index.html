@@ -2,24 +2,29 @@
 <title>kaopanel</title>
 <script>"use strict"
 const startCamera = async function(front) {
-	var videoop = front ? true : {
+	const videoopback = {
 		facingMode : { ideal : "environment" },
-		width: { min: 640, ideal: 1920 },
-		height: { min: 480, ideal: 1080 }
-//		width: { min: 640, ideal: 1280, max: 1920 },
-//		height: { min: 480, ideal: 720, max: 1080 }
-	};
-	const medias = { audio: false, video: videoop };
+		width: { min: 480, ideal: 1080 }, height: { min: 480, ideal: 1080 }
+//		width: { min: 640, ideal: 1920 }, height: { min: 480, ideal: 1080 }
+//		width: { min: 640, ideal: 1280, max: 1920 }, height: { min: 480, ideal: 720, max: 1080 }
+	}
+	const videoopfront = {
+		facingMode : { ideal : "user" },
+		width: { min: 480, ideal: 1080 }, height: { min: 480, ideal: 1080 }
+//		width: { min: 640, ideal: 1920 }, height: { min: 480, ideal: 1080 }
+//		width: { min: 640, ideal: 1280, max: 1920 }, height: { min: 480, ideal: 720, max: 1080 }
+	}
+	const medias = { audio: false, video: front ? videoopfront : videoopback };
 	video.srcObject = await	navigator.mediaDevices.getUserMedia(medias)
 }
 const panelimg = new Image()
 panelimg.src = "kawada.jpg"
-const KAO_POS = [ [ 954, 875, 100, 160 ], [ 1310, 659, 100, 150 ] ] // center_x, center_y, rx, ry
+const KAO_POS = [ [ 954, 870, 100, 160 ], [ 1310, 659, 100, 155 ] ] // center_x, center_y, rx, ry
 
 window.onload = async function() {
-	startCamera()
+	startCamera(true)
 
-	const g = canvas.getContext("2d");
+	const g = canvas.getContext("2d")
 
 	const drawImageFit = function(img, iw, ih, x, y, w, h) {
 		if (iw / ih < w / h) {
@@ -34,30 +39,40 @@ window.onload = async function() {
 			return { x: 0, y: dy, w: w, h: dh }
 		}
 	}
-	const drawImageFitReverse = function(img, iw, ih, x, y, w, h, sw) {
+	const drawImageFitReverse = function(img, iw, ih, x, y, w, h) {
 		if (iw / ih < w / h) {
 			const dw = iw * h / ih
 			const dx = (w - dw) / 2
-			g.drawImage(img, 0, 0, iw, ih, -(x + dx) - sw / 4, y, dw, h) // ?
+			g.drawImage(img, 0, 0, iw, ih, -(x + dx) - w, y, dw, h) // ?
 			return { x: dx, y: 0, w: dw, h: h }
 		} else {
 			const dh = ih * w / iw
 			const dy = (h - dh) / 2
-			g.drawImage(img, 0, 0, iw, ih, -x - sw / 4, y + dy, w, dh)
+			//g.drawImage(img, 0, 0, iw, ih, -x - sw / 4, y + dy, w, dh)
+			g.drawImage(img, 0, 0, iw, ih, -x - w, y + dy, w, dh)
 			return { x: 0, y: dy, w: w, h: dh }
 		}
 	}
+	let tx
 	const draw = function() {
 		requestAnimationFrame(draw)
-
-		const sw = canvas.offsetWidth
-		const sh = canvas.offsetHeight
+		const pratio = window.devicePixelRatio
+		const sw = canvas.offsetWidth * pratio
+		let sh = canvas.offsetHeight * pratio
 		canvas.width = sw
 		canvas.height = sh
 
 		const iw = panelimg.width
 		const ih = panelimg.height
-		const tx = drawImageFit(panelimg, iw, ih, 0, 0, sw, sh)
+		/*
+		if (iw / ih > sw / sh) {
+			sh = sw / iw * ih
+		}
+		*/
+		tx = drawImageFit(panelimg, iw, ih, 0, 0, sw, sh)
+		const videoy = tx.h / pratio - 1
+		video.style.top = (videoy < 0 ? 0 : videoy) + "px"
+		video.style.left = tx.w / pratio / 2 + "px"
 
 		const vw = video.videoWidth
 		const vh = video.videoHeight
@@ -79,7 +94,7 @@ window.onload = async function() {
 			g.closePath()
 			g.clip()
 			
-			const ratio = 8
+			const ratio = vw / vh > 1 ? 8 : 4
 			const x = cx - rx * ratio / 2
 			const y = cy - ry * ratio / 2
 			const kh = ry * ratio
@@ -88,7 +103,7 @@ window.onload = async function() {
 			//drawImageFit(video, vw, vh, x, y, kw, kh)
 
 			g.scale(-1, 1)
-			drawImageFitReverse(video, vw, vh, x, y, kw, kh, sw)
+			drawImageFitReverse(video, vw, vh, x, y, kw, kh)
 
 			/*
 			const dw = vw * sh / vh
@@ -116,13 +131,21 @@ window.onload = async function() {
 			const ry = kao[3] / ih * tx.h
 
 			drawKao(cx, cy, rx, ry)
+			//break
 		}
 	}
 	draw()
 
 	document.body.onclick = function() {
-		var a = document.createElement('a')
-		a.href = canvas.toDataURL('image/jpeg', 0.85)
+		const canvas2 = document.createElement('canvas')
+		canvas2.width = tx.w
+		canvas2.height = tx.h
+		const g2 = canvas2.getContext("2d")
+		const img = g.getImageData(tx.x, tx.y, tx.w, tx.h)
+		g2.putImageData(img, 0, 0)
+
+		const a = document.createElement('a')
+		a.href = canvas2.toDataURL('image/jpeg', 0.9)
 		a.download = 'download.jpg'
 		a.click()
 	}
@@ -140,10 +163,11 @@ body {
 	height: 100%;
 }
 #video {
-	width: 10px;
-	height: 10px;
+	width: 1px;
+	height: 1px;
+	x-top: 100px;
 	position: absolute;
-	visibility: hidden;
+	z-index: -1;
 }
 </style>
 </head>

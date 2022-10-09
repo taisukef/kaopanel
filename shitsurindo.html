@@ -6,10 +6,10 @@
 
 // 設定
 const KAO_SRC = "shitsurindo.jpg"
-const KAO_POS = [ // // center_x, center_y, rx, ry
-	[501, 693, 100, 120],
-	[1676, 580, 100, 120],
-	[1400, 1246, 85, 100],
+const KAO_POS = [ // // center_x, center_y, rx, ry, deg
+	[501, 693, 100, 120, -40],
+	[1676, 580, 100, 120, 37],
+	[1400, 1246, 85, 100, 0],
 ];
 const FILENAME = KAO_SRC;
 
@@ -93,8 +93,15 @@ window.onload = async function() {
 		if (!vh)
 			return
 		
-		const drawKao = function(cx, cy, rx, ry) {
+		const drawKao = function(cx, cy, rx, ry, deg = 0) {
 			g.save()
+			const th = deg / 180 * Math.PI;
+			g.setTransform(
+				Math.cos(th), Math.sin(th),
+				-Math.sin(th), Math.cos(th),
+				cx - cx * Math.cos(th) + cy * Math.sin(th),
+				cy - cx * Math.sin(th) - cy * Math.cos(th)
+			);
 			g.beginPath()
 			for (let i = 0; i < 360; i++) {
 				const th = Math.PI * 2 * i / 360
@@ -144,7 +151,7 @@ window.onload = async function() {
 			const rx = kao[2] / iw * tx.w
 			const ry = kao[3] / ih * tx.h
 
-			drawKao(cx, cy, rx, ry)
+			drawKao(cx, cy, rx, ry, kao[4])
 			//break
 		}
 	}

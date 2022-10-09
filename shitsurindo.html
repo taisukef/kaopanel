@@ -1,0 +1,188 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<title>kaopanel - RENEW x 漆琳堂</title>
+<link rel="apple-touch-icon" href="kaopanel.jpg"/>
+<meta property="og:image" content="kaopanel.jpg">
+<script>"use strict"
+
+// 設定
+const KAO_SRC = "shitsurindo.jpg"
+const KAO_POS = [ // // center_x, center_y, rx, ry
+	[501, 693, 100, 120],
+	[1676, 580, 100, 120],
+	[1400, 1246, 85, 100],
+];
+
+//
+const panelimg = new Image()
+panelimg.src = KAO_SRC
+
+
+const startCamera = async function(front) {
+	const videoopback = {
+		facingMode : { ideal : "environment" },
+		width: { min: 480, ideal: 1080 }, height: { min: 480, ideal: 1080 }
+//		width: { min: 640, ideal: 1920 }, height: { min: 480, ideal: 1080 }
+//		width: { min: 640, ideal: 1280, max: 1920 }, height: { min: 480, ideal: 720, max: 1080 }
+	}
+	const videoopfront = {
+		facingMode : { ideal : "user" },
+		width: { min: 480, ideal: 1080 }, height: { min: 480, ideal: 1080 }
+//		width: { min: 640, ideal: 1920 }, height: { min: 480, ideal: 1080 }
+//		width: { min: 640, ideal: 1280, max: 1920 }, height: { min: 480, ideal: 720, max: 1080 }
+	}
+	const medias = { audio: false, video: front ? videoopfront : videoopback };
+	video.srcObject = await	navigator.mediaDevices.getUserMedia(medias)
+}
+
+window.onload = async function() {
+	startCamera(true)
+
+	const g = canvas.getContext("2d")
+
+	const drawImageFit = function(img, iw, ih, x, y, w, h) {
+		if (iw / ih < w / h) {
+			const dw = iw * h / ih
+			const dx = (w - dw) / 2
+			g.drawImage(img, 0, 0, iw, ih, x + dx, y, dw, h)
+			return { x: dx, y: 0, w: dw, h: h }
+		} else {
+			const dh = ih * w / iw
+			const dy = (h - dh) / 2
+			g.drawImage(img, 0, 0, iw, ih, x, y + dy, w, dh)
+			return { x: 0, y: dy, w: w, h: dh }
+		}
+	}
+	const drawImageFitReverse = function(img, iw, ih, x, y, w, h) {
+		if (iw / ih < w / h) {
+			const dw = iw * h / ih
+			const dx = (w - dw) / 2
+			g.drawImage(img, 0, 0, iw, ih, -(x + dx) - w, y, dw, h) // ?
+			return { x: dx, y: 0, w: dw, h: h }
+		} else {
+			const dh = ih * w / iw
+			const dy = (h - dh) / 2
+			//g.drawImage(img, 0, 0, iw, ih, -x - sw / 4, y + dy, w, dh)
+			g.drawImage(img, 0, 0, iw, ih, -x - w, y + dy, w, dh)
+			return { x: 0, y: dy, w: w, h: dh }
+		}
+	}
+	let tx
+	const draw = function() {
+		requestAnimationFrame(draw)
+		const pratio = window.devicePixelRatio
+		const sw = canvas.offsetWidth * pratio
+		let sh = canvas.offsetHeight * pratio
+		canvas.width = sw
+		canvas.height = sh
+
+		const iw = panelimg.width
+		const ih = panelimg.height
+		/*
+		if (iw / ih > sw / sh) {
+			sh = sw / iw * ih
+		}
+		*/
+		tx = drawImageFit(panelimg, iw, ih, 0, 0, sw, sh)
+		const videoy = tx.h / pratio - 1
+		video.style.top = (videoy < 0 ? 0 : videoy) + "px"
+		video.style.left = tx.w / pratio / 2 + "px"
+
+		const vw = video.videoWidth
+		const vh = video.videoHeight
+		if (!vh)
+			return
+		
+		const drawKao = function(cx, cy, rx, ry) {
+			g.save()
+			g.beginPath()
+			for (let i = 0; i < 360; i++) {
+				const th = Math.PI * 2 * i / 360
+				const ex = cx + Math.cos(th) * rx
+				const ey = cy + Math.sin(th) * ry
+				if (i == 0)
+					g.moveTo(ex, ey)
+				else
+					g.lineTo(ex, ey)
+			}
+			g.closePath()
+			g.clip()
+			
+			const ratio = vw / vh > 1 ? 8 : 4
+			const x = cx - rx * ratio / 2
+			const y = cy - ry * ratio / 2
+			const kh = ry * ratio
+			const kw = rx * ratio
+
+			//drawImageFit(video, vw, vh, x, y, kw, kh)
+
+			g.scale(-1, 1)
+			drawImageFitReverse(video, vw, vh, x, y, kw, kh)
+
+			/*
+			const dw = vw * sh / vh
+			const dx = (sw - dw) / 2
+			console.log(dx, dw)
+			//g.drawImage(video, 0, 0, vw, vh, x + dx - sw * 0, y, dw, sh)
+			g.drawImage(video, 0, 0, vw, vh, x - dx, y, dw, sh)
+			*/
+			g.restore()
+		}
+
+		/*
+		const cx = sw / 2
+		const cy = sh / 2
+		const rx = sw / 6
+		const ry = sw / 4
+		drawKao(cx, cy, rx, ry)
+		*/
+		
+		for (let i = 0; i < KAO_POS.length; i++) {
+			const kao = KAO_POS[i]
+			const cx = kao[0] / iw * tx.w + tx.x
+			const cy = kao[1] / ih * tx.h + tx.y
+			const rx = kao[2] / iw * tx.w
+			const ry = kao[3] / ih * tx.h
+
+			drawKao(cx, cy, rx, ry)
+			//break
+		}
+	}
+	draw()
+
+	document.body.onclick = function() {
+		const canvas2 = document.createElement('canvas')
+		canvas2.width = tx.w
+		canvas2.height = tx.h
+		const g2 = canvas2.getContext("2d")
+		const img = g.getImageData(tx.x, tx.y, tx.w, tx.h)
+		g2.putImageData(img, 0, 0)
+
+		const a = document.createElement('a')
+		a.href = canvas2.toDataURL('image/jpeg', 0.9)
+		a.download = 'kawadaac2019.jpg'
+		a.click()
+	}
+}
+</script>
+<style>
+body {
+	margin: 0;
+	padding: 0;
+	height: 100vh;
+	background-color: black;
+}
+#canvas {
+	width: 100%;
+	height: 100%;
+}
+#video {
+	width: 1px;
+	height: 1px;
+	x-top: 100px;
+	position: absolute;
+	z-index: -1;
+}
+</style>
+</head>
+<body><video id="video" autoplay playsinline></video><canvas id="canvas"></canvas></body>
+</html>

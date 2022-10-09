@@ -11,6 +11,7 @@ const KAO_POS = [ // // center_x, center_y, rx, ry
 	[1676, 580, 100, 120],
 	[1400, 1246, 85, 100],
 ];
+const FILENAME = KAO_SRC;
 
 //
 const panelimg = new Image()
@@ -159,7 +160,7 @@ window.onload = async function() {
 
 		const a = document.createElement('a')
 		a.href = canvas2.toDataURL('image/jpeg', 0.9)
-		a.download = 'kawadaac2019.jpg'
+		a.download = FILENAME;
 		a.click()
 	}
 }
